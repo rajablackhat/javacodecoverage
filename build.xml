@@ -36,7 +36,7 @@
    
         <taskdef name="junit" classname="org.apache.tools.ant.taskdefs.optional.junit.JUnitTask">
             <classpath>
-			<pathelement location="${lib.junit.dir}/ant-junit.jar"/>
+			<pathelement location="/opt/apache-ant/lib/*.jar"/>
                 <path refid="classpath"/>
             </classpath>
         </taskdef>
