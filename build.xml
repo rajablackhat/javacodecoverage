@@ -1,67 +1,84 @@
+  
 <?xml version="1.0" encoding="UTF-8"?>
-<project name="UT coverage with Ant and JaCoCo running tests" default="all" basedir="." xmlns:jacoco="antlib:org.jacoco.ant">
 
-    <!-- ========= Define the main properties of this project ========= -->
-    <property name="src.dir" value="src" />
-    <property name="test.dir" value="test" />
-    <property name="lib.junit.dir" value="lib" />
-    <property name="build.dir" value="target" />
-    <property name="classes.dir" value="${build.dir}\classes" />
-    <property name="reports.dir" value="${build.dir}\reports" />
-    <property name="reports.junit.xml.dir" value="${reports.dir}\junit" />
+<!--
+   Copyright (c) 2009, 2020 Mountainminds GmbH & Co. KG and Contributors
+   This program and the accompanying materials are made available under
+   the terms of the Eclipse Public License 2.0 which is available at
+   http://www.eclipse.org/legal/epl-2.0
+   SPDX-License-Identifier: EPL-2.0
+   Contributors:
+      Marc R. Hoffmann - initial API and implementation
+-->
+
+<project name="Example Ant Build with JaCoCo" default="rebuild" xmlns:jacoco="antlib:org.jacoco.ant">
+
+	<description>
+	  Example Ant build file that demonstrates how a JaCoCo coverage report
+	  can be itegrated into an existing build in three simple steps.
+	</description>
+
+	<property name="src.dir" location="./src" />
+	<property name="result.dir" location="./target" />
+	<property name="result.classes.dir" location="${result.dir}/classes" />
+	<property name="result.report.dir" location="${result.dir}/report/junit" />
+	<property name="result.exec.file" location="${result.dir}/jacoco.exec" />
+
+	<!-- Step 1: Import JaCoCo Ant tasks -->
+	<taskdef uri="antlib:org.jacoco.ant" resource="org/jacoco/ant/antlib.xml">
+		<classpath path="../../../lib/jacocoant.jar" />
+	</taskdef>
+
 	<target name="clean">
-        <delete dir=".sonar" />
-        <delete dir="${build.dir}" />
-        <delete dir="${reports.dir}" />
-    </target>
+		<delete dir="${result.dir}" />
+	</target>
 
-    <target name="init">
-        <mkdir dir="${build.dir}" />
-        <mkdir dir="${classes.dir}" />
-        <mkdir dir="${reports.dir}" />
-        <mkdir dir="${reports.junit.xml.dir}" />
-    </target>
+	<target name="compile">
+		<mkdir dir="${result.classes.dir}" />
+		<javac srcdir="${src.dir}" destdir="${result.classes.dir}" debug="true" includeantruntime="false" />
+	</target>
 
-    <target name="compile" depends="init">
-        <javac srcdir="${src.dir}" destdir="${classes.dir}" classpathref="classpath" includeantruntime="true"  />
-        <javac srcdir="${test.dir}" destdir="${classes.dir}" classpathref="classpath" includeantruntime="true" />
-    </target>
+	<target name="test" depends="compile">
+		<!-- Step 2: Wrap test execution with the JaCoCo coverage task -->
+		<jacoco:coverage destfile="${result.exec.file}">
+			<java classname="org.jacoco.examples.parser.Main" fork="true">
+				<classpath path="${result.classes.dir}" />
+				<arg value="2 * 3 + 4"/>
+				<arg value="2 + 3 * 4"/>
+				<arg value="(2 + 3) * 4"/>
+				<arg value="2 * 2 * 2 * 2"/>
+				<arg value="1 + 2 + 3 + 4"/>
+				<arg value="2 * 3 + 2 * 5"/>
+			</java>
+		</jacoco:coverage>
+	</target>
 
-       
-    <path id="classpath">
-        <fileset dir="${lib.junit.dir}" includes="*.jar"/>
-    </path>
-   
-    <target name="test" depends="compile">
-   
-        <taskdef name="junit" classname="org.apache.tools.ant.taskdefs.optional.junit.JUnitTask">
-            <classpath>
-			<pathelement location="${lib.junit.dir}/junit.jar"/>
-                <path refid="classpath"/>
-            </classpath>
-        </taskdef>
-   
-        <!-- Import the JaCoCo Ant Task -->
-        <taskdef uri="antlib:org.jacoco.ant" resource="org/jacoco/ant/antlib.xml">
-           <classpath>
-    		<pathelement location="${lib.junit.dir}/jacocoant.jar"/>
-  	</classpath>
-        </taskdef>
-   
-        <!-- Run your unit tests, adding the JaCoCo agent -->
-        <jacoco:coverage destfile="target/jacoco.exec" xmlns:jacoco="antlib:org.jacoco.ant">
-          <junit fork="yes" dir="${basedir}" failureProperty="test.failed">
-            <classpath location="${classes.dir}" />
-            <classpath refid="classpath" />
+	<target name="report" depends="test">
+		<!-- Step 3: Create coverage report -->
+		<jacoco:report>
 
-            <formatter type="xml" />
-            <batchtest todir="${reports.junit.xml.dir}">
-              <fileset dir="${test.dir}">
-                <include name="**/*Test.java" />
-              </fileset>
-            </batchtest>
-          </junit>
-        </jacoco:coverage>   
-       
-    </target>
+			<!-- This task needs the collected execution data and ... -->
+			<executiondata>
+				<file file="${result.exec.file}" />
+			</executiondata>
+
+			<!-- the class files and optional source files ... -->
+			<structure name="JaCoCo Ant Example">
+				<classfiles>
+					<fileset dir="${result.classes.dir}" />
+				</classfiles>
+				<sourcefiles encoding="UTF-8">
+					<fileset dir="${src.dir}" />
+				</sourcefiles>
+			</structure>
+
+			<!-- to produce reports in different formats. -->
+			<html destdir="${result.report.dir}" />
+			<csv destfile="${result.report.dir}/report.csv" />
+			<xml destfile="${result.report.dir}/report.xml" />
+		</jacoco:report>
+	</target>
+
+	<target name="rebuild" depends="clean,compile,test,report" />
+
 </project>
